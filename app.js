@@ -688,7 +688,6 @@ function esDispositivoMovil() {
 
   return navegadorMovil || pantallaTactil;
 }
-odigo(event) {
 
 function actualizarMensajeEscaner(mensaje, tipo = "") {
   const elemento = $("#mensajeEscaner");
