@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userProfile() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function validRole() {
+      return signedIn() &&
+        userProfile().data.activo != false &&
+        userProfile().data.rol in ['admin', 'vendedor'];
+    }
+
+    function isAdmin() {
+      return validRole() && userProfile().data.rol == 'admin';
+    }
+
+    match /usuarios/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update, delete: if false;
+    }
+
+    match /surtidos/{surtidoId} {
+      allow read, create, update: if validRole();
+      allow delete: if false;
+    }
+  }
+}

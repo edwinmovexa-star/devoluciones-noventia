@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de pedidos</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section id="pantallaLogin" class="login-screen">
+    <form id="formLogin" class="login-card">
+      <div class="login-brand">
+        <img src="logo.JPG" alt="Noventia" class="imglogo">
+        <!-- <span class="login-mark">N</span> -->
+        <div class="text-context">
+          <h1>Control de pedidos</h1>
+          <p>Acceso al sistema</p>
+        </div>
+      </div>
+
+      <label>
+        Correo electrónico
+        <input id="loginCorreo" type="email" autocomplete="username" required placeholder="usuario@empresa.com" />
+      </label>
+
+      <label>
+        Contraseña
+        <input id="loginContrasena" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••" />
+      </label>
+
+      <p id="loginError" class="login-error hidden"></p>
+      <button id="btnIniciarSesion" type="submit" class="primary login-submit">Iniciar sesión</button>
+    </form>
+  </section>
+
+  <div id="aplicacion" class="hidden">
+  <header class="topbar">
+    <div class="item-header">
+      <img src="logo.JPG" alt="Noventia" class="imglogo">
+      <div>
+        <h2>Control de pedidos <p style="font-size:12px ;">Surtido, seguimiento, pago y devoluciones</p></h2>
+        
+      </div>
+      <div id="usuarioSesion" class="session-user">
+        <i class="fa-solid fa-spider fa-2x"></i>
+        <span id="usuarioNombre">Usuario</span>
+        <small id="usuarioRol"></small>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btnReporteCaja" data-admin-only class="secondary">Reporte de caja</button> 
+      <button id="btnExportar" data-admin-only class="secondary">Exportar pedidos</button>
+      <button id="btnAlmacen" class="primary" title="Venta de almacen"><i class="fas fa-store"></i></button>
+      <button id="btnBazar" class="primary" title="Venta de bazar"><i class="fas fa-store-alt"></i></button>
+      <button id="btnVentaRapida" class="primary" title="Venta rapida"><i class="fas fa-cash-register"></i></button>
+      <button id="btnCerrarSesion" class="secondary" style="background-color:#de0606; color: #f5f5f5" title="cerrar sesion"><i class="fa-solid fa-arrow-right-from-bracket" style="color:#007fd7"></i></button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="summary">
+      <article><span id="totalHoy">0</span><small>Pedidos de hoy</small></article>
+      <article><span id="totalProceso">0</span><small>En proceso</small></article>
+      <article><span id="totalRuta">0</span><small>Enviado / punto de venta</small></article>
+      <article><span id="totalFinalizados">0</span><small>Entregados / finalizados</small></article>
+    </section>
+
+    <section class="toolbar toolbar-payments">
+      <input id="buscador" type="search" placeholder="Buscar folio, cliente, ubicación, vendedor o producto" />
+      <select id="filtroEstado">
+        <option value="">Todos los estados</option>
+        <option value="EN_PROCESO">En proceso</option>
+        <option value="CLASIFICADO">Clasificado</option>
+        <option value="ENVIADO">Enviado</option>
+        <option value="CON_REPARTIDOR">Ingresado a punto de venta</option>
+        <option value="ENTREGADO">Entregado</option>
+        <option value="FINALIZADO">Finalizado</option>
+        <option value="CANCELADO">Cancelado</option>
+      </select>
+      <select id="filtroPago">
+        <option value="">Todos los pagos</option>
+        <option value="PENDIENTE">Pendientes de pago</option>
+        <option value="PAGADO">Pagados</option>
+        <option value="APARTADO">Apartados</option>
+        <option value="VENCIDO">Apartados vencidos</option>
+      </select>
+      <select id="filtroMetodo">
+        <option value="">Cualquier método</option>
+        <option value="EFECTIVO">Efectivo</option>
+        <option value="TRANSFERENCIA">Transferencia</option>
+      </select>
+      <select id="filtroDevolucion">
+        <option value="">Todos los pedidos</option>
+        <option value="CON_DEVOLUCION">Con devoluciones</option>
+        <option value="SIN_DEVOLUCION">Sin devoluciones</option>
+      </select>
+    </section>
+
+    <section>
+      <div id="estadoConexion" class="notice">Conectando con Firebase…</div>
+      <div id="listaSurtidos" class="cards"></div>
+      <div id="sinResultados" class="empty hidden">No hay pedidos para mostrar.</div>
+    </section>
+  </main>
+
+  <dialog id="modalSurtido">
+    <form id="formSurtido">
+      <div class="dialog-header">
+        <div>
+          <h2 id="modalSurtidoTitulo">Nuevo pedido</h2>
+          <p>La fecha se asigna automáticamente y no puede modificarse.</p>
+        </div>
+        <button type="button" class="icon-button" data-close="modalSurtido"><i data-close="modalSurtido" class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          Fecha
+          <input id="fechaPedido" readonly />
+        </label>
+
+        <input id="tipoOperacion" type="hidden" />
+
+        <label class="span-2">
+          Nombre del cliente
+          <input id="nombreCliente" required maxlength="120" placeholder="Nombre completo o referencia" />
+        </label>
+
+        <fieldset id="bloqueTipoEntrega" class="span-2 delivery-choice">
+          <legend>Tipo de entrega</legend>
+          <label class="inline-check">
+            <input type="radio" name="tipoEntrega" value="PUNTO_ENTREGA" required />
+            Punto de entrega
+          </label>
+          <label class="inline-check">
+            <input type="radio" name="tipoEntrega" value="DOMICILIO" required />
+            Domicilio
+          </label>
+        </fieldset>
+
+        <label id="campoPuntoEntrega" class="span-2 hidden">
+          Punto de entrega
+          <select id="puntoEntrega">
+            <option value="">Seleccionar</option>
+            <option>Naucalpan</option>
+            <option>Raza</option>
+            <option>Rosario</option>
+            <option>Cofradia</option>
+            <option>Jardines</option>
+            <option>Huilango</option>
+            <option>Azotlan</option>
+          </select>
+        </label>
+
+        <label id="campoDomicilio" class="span-2 hidden">
+          Domicilio
+          <input id="ubicacion" maxlength="180" placeholder="Escribe la dirección de entrega" />
+        </label>
+
+        <label id="campoCostoEnvio" class="hidden">
+          Costo de envío
+          <input id="costoEnvio" type="number" min="0" step="0.01" value="0" placeholder="0.00" />
+        </label>
+
+        <label>
+          Responsable de surtido
+          <select id="responsable" required>
+            <option value="">Seleccionar</option>
+            <option>Dila</option>
+            <option>Juan</option>
+            <option>Frida</option>
+            <option>Eric</option>
+            <option>Yare</option>
+            <option>Kevin</option>
+          </select>
+        </label>
+
+        <label>
+          Vendedor
+          <input id="vendedor" required maxlength="80" placeholder="Nombre del vendedor" />
+        </label>
+
+        <label id="campoEstadoInicial">
+          Estatus del pedido
+          <select id="estadoInicial" required>
+            <option value="EN_PROCESO">En proceso</option>
+            <option value="ENVIADO">Enviado</option>
+          </select>
+        </label>
+
+        <label>
+          Estatus de pago
+          <select id="estatusPago" required>
+            <option value="">Seleccionar</option>
+            <option value="PENDIENTE">Pendiente de pago</option>
+            <option value="PAGADO">Pagado</option>
+            <option value="APARTADO">Apartado</option>
+          </select>
+        </label>
+
+        <label id="campoMontoApartado" class="hidden">
+          Cantidad del primer apartado
+          <input id="montoApartado" type="number" min="0.01" step="0.01" placeholder="0.00" />
+        </label>
+
+        <label id="campoMetodoPago" class="hidden">
+          Método del primer pago
+          <select id="metodoPagoInicial">
+            <option value="">Seleccionar</option>
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="TRANSFERENCIA">Transferencia</option>
+          </select>
+        </label>
+
+        <label id="campoFechaPago" class="hidden">
+          Fecha del primer pago
+          <input id="fechaPagoInicial" readonly />
+        </label>
+      </div>
+
+      <div class="product-heading">
+        <div>
+          <h3>Productos</h3>
+          <!-- <p class="scanner-help">Escanea o escribe la clave. El nombre se completará desde <code>inventario.json</code>.</p> -->
+        </div>
+        <span id="estadoCatalogo" class="catalog-status loading">Cargando catálogo…</span>
+      </div>
+      <div class="product-entry">
+        
+        <dialog id="modalEscaner" class="modal-escaner">
+          <div class="scanner-container">
+
+            <div class="dialog-header scanner-header">
+              <div>
+                <h2>Escanear código</h2>
+                <p>Coloca el código dentro del recuadro.</p>
+              </div>
+
+              <button
+                id="btnCerrarEscaner"
+                type="button"
+                class="icon-button"
+                aria-label="Cerrar cámara"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="scanner-video-wrapper">
+              <video
+                id="videoEscaner"
+                autoplay
+                muted
+                playsinline
+              ></video>
+
+              <div class="scanner-guide">
+                <div class="scanner-line"></div>
+              </div>
+            </div>
+
+            <p id="mensajeEscaner" class="scanner-message">
+              Preparando cámara…
+            </p>
+
+            <button
+              id="btnCancelarEscaner"
+              type="button"
+              class="secondary scanner-cancel-button"
+            >
+              Cancelar
+            </button>
+
+          </div>
+        </dialog>
+
+
+        <label class="grow">
+          Producto
+          <input id="productoNombre" maxlength="150" placeholder="Descripción" />
+        </label>
+        <label class="money">
+          Costo unitario
+          <input id="productoCosto" type="number" min="0.01" step="0.01" placeholder="0.00" />
+        </label>
+        <label class="qty">
+          Cantidad
+          <input id="productoCantidad" type="number" min="1" value="1" />
+        </label>
+        <button id="btnAgregarProducto" type="button" class="secondary"><i class="fa-solid fa-plus"></i></button>
+      </div>
+
+      <div id="productosNuevo" class="product-list"></div>
+      <div class="order-total">Total del pedido: <strong id="totalNuevo">$0.00</strong></div>
+
+      <div class="dialog-actions">
+        <button type="button" class="ghost" data-close="modalSurtido">Cancelar</button>
+        <button id="btnGuardarBorrador" type="button" class="secondary">Guardar pedido</button>
+        <button id="btnFinalizarNuevo" type="button" class="primary">Guardar e imprimir etiqueta</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="modalDetalle">
+    <div class="dialog-header">
+      <div>
+        <h2 id="detalleId">Pedido</h2>
+        <p id="detalleFecha"></p>
+      </div>
+      <button type="button" class="icon-button" data-close="modalDetalle"><i data-close="modalDetalle" class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div id="detalleContenido"></div>
+
+    <section id="panelActualizarEstado" class="status-panel">
+      <label>
+        Cambiar estatus
+        <select id="cambiarEstado"></select>
+      </label>
+
+      <label id="confirmacionInventarioBox" class="inventory-confirm hidden">
+        <input id="confirmarSumaInventario" type="checkbox" />
+        <span>
+          <strong id="tituloConfirmacionInventario">Devolución registrada en el sistema</strong>
+          <small id="textoConfirmacionInventario">Confirma que la devolución ya fue registrada en el sistema antes de finalizar el pedido.</small>
+        </span>
+      </label>
+
+      <button id="btnCambiarEstado" type="button" class="primary">Actualizar estatus</button>
+    </section>
+
+    <div class="dialog-actions wrap">
+      <button id="btnAgregarPago" type="button" class="primary">Agregar pago</button>
+      <button id="btnImprimir" type="button" class="secondary">Imprimir etiqueta</button>
+      <button id="btnAbrirDevolucion" type="button" class="danger">Registrar devolución</button>
+    </div>
+  </dialog>
+
+
+  <dialog id="modalCaja" class="wide-dialog">
+    <div class="dialog-header">
+      <div>
+        <h2>Reporte de caja</h2>
+        <p>Los ingresos se calculan con la fecha real de cada pago o abono.</p>
+      </div>
+      <button type="button" class="icon-button" data-close="modalCaja"><i data-close="modalCaja" class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <section class="cash-filters">
+      <label>
+        Periodo
+        <select id="periodoCaja">
+          <option value="DIA">Por día</option>
+          <option value="SEMANA">Por semana</option>
+          <option value="MES">Por mes</option>
+        </select>
+      </label>
+
+      <label id="campoFechaCaja">
+        Fecha
+        <input id="fechaCaja" type="date" />
+      </label>
+
+      <label id="campoSemanaCaja" class="hidden">
+        Semana
+        <input id="semanaCaja" type="week" />
+      </label>
+
+      <label id="campoMesCaja" class="hidden">
+        Mes
+        <input id="mesCaja" type="month" />
+      </label>
+
+      <label>
+        Método
+        <select id="metodoCaja">
+          <option value="">Todos</option>
+          <option value="EFECTIVO">Efectivo</option>
+          <option value="TRANSFERENCIA">Transferencia</option>
+        </select>
+      </label>
+
+      <button id="btnAplicarCaja" type="button" class="primary">Consultar</button>
+    </section>
+
+    <section class="cash-summary">
+      <article>
+        <small>Ingresos</small>
+        <strong id="cajaTotal">$0.00</strong>
+      </article>
+      <article>
+        <small>Salidas y ajustes</small>
+        <strong id="cajaDevoluciones">$0.00</strong>
+      </article>
+      <article>
+        <small>Neto de caja</small>
+        <strong id="cajaNeto">$0.00</strong>
+      </article>
+      <article>
+        <small>Efectivo</small>
+        <strong id="cajaEfectivo">$0.00</strong>
+      </article>
+      <article>
+        <small>Transferencia</small>
+        <strong id="cajaTransferencia">$0.00</strong>
+      </article>
+      <article>
+        <small>Movimientos</small>
+        <strong id="cajaMovimientos">0</strong>
+      </article>
+    </section>
+
+    <div class="cash-table-wrap">
+      <table class="cash-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Folio</th>
+            <th>Cliente</th>
+            <th>Tipo</th>
+            <th>Método</th>
+            <th>Importe</th>
+            <th>Vendedor</th>
+          </tr>
+        </thead>
+        <tbody id="tablaCaja"></tbody>
+      </table>
+      <div id="sinMovimientosCaja" class="empty hidden">No hay movimientos de caja en el periodo seleccionado.</div>
+    </div>
+
+    <div class="dialog-actions wrap">
+      <button id="btnExportarCaja" type="button" class="secondary">Exportar caja a Excel</button>
+      <button id="btnImprimirCaja" type="button" class="primary">Imprimir reporte</button>
+    </div>
+  </dialog>
+
+  <dialog id="modalPago">
+    <form id="formPago">
+      <div class="dialog-header">
+        <div>
+          <h2>Agregar pago</h2>
+          <p id="pagoFolio"></p>
+        </div>
+        <button type="button" class="icon-button" data-close="modalPago"><i data-close="modalPago" class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="payment-summary" id="resumenPago"></div>
+
+      <div class="form-grid">
+        <label>
+          Cantidad del pago
+          <input id="nuevoMontoPago" type="number" min="0.01" step="0.01" required placeholder="0.00" />
+        </label>
+
+        <label>
+          Método de pago
+          <select id="nuevoMetodoPago" required>
+            <option value="">Seleccionar</option>
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="TRANSFERENCIA">Transferencia</option>
+          </select>
+        </label>
+
+        <label>
+          Fecha del pago
+          <input id="nuevaFechaPago" readonly />
+        </label>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="ghost" data-close="modalPago">Cancelar</button>
+        <button type="submit" class="primary">Guardar pago</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="modalDevolucion">
+    <div class="dialog-header">
+      <div>
+        <h2>Registrar devolución</h2>
+        <p id="devolucionId"></p>
+      </div>
+      <button type="button" class="icon-button" data-close="modalDevolucion"><i data-close="modalDevolucion" class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form id="formDevolucion">
+      <div id="productosDevolucion" class="return-list"></div>
+
+      <label>
+        Motivo de devolución
+        <select id="motivoDevolucion" required>
+          <option value="">Seleccionar motivo</option>
+          <option>Cliente no lo quiso</option>
+          <option>Producto incorrecto</option>
+          <option>Producto dañado</option>
+          <option>Producto incompleto</option>
+          <option>No se pudo entregar</option>
+          <option>Otro</option>
+        </select>
+      </label>
+
+      <label>
+        Observaciones
+        <textarea id="observacionesDevolucion" rows="3" maxlength="500" placeholder="Información adicional"></textarea>
+      </label>
+
+      <div class="sicar-pending-box">
+        <strong>Siguiente paso</strong>
+        <span>Registrar devolución en el sistema</span>
+        <small>Después de guardar, el pedido quedará pendiente de registrar la devolución en el sistema y finalizar.</small>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="ghost" data-close="modalDevolucion">Cancelar</button>
+        <button type="submit" class="danger">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="templateCard">
+    <article class="card">
+      <div class="card-head">
+        <strong class="card-id"></strong>
+        <span class="status"></span>
+      </div>
+      <p class="card-client"></p>
+      <p class="card-date"></p>
+      <p class="card-location"></p>
+      <p class="card-payment"></p>
+      <p class="card-count"></p>
+      <div class="card-actions">
+        <button type="button" class="primary card-quick-pay" title="Agregar pago"><i class="fa-solid fa-cash-register"></i></button>
+        <button type="button" class="secondary card-open" title="Ver detalle"><i class="fa-regular fa-eye"></i></button>
+      </div>
+    </article>
+  </template>
+  <script src="https://kit.fontawesome.com/702f509feb.js" crossorigin="anonymous"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script type="module" src="app.js"></script>
+  </div>
+</body>
+</html>

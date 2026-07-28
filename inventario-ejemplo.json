@@ -1,0 +1,14 @@
+[
+  {
+    "clave": "06062026186",
+    "descripcion": "Juego de utensilios de cocina",
+    "categoria": "Cocina",
+    "ubicacion": "Pasillo 3",
+    "costo": 149.9
+  },
+  {
+    "SKU": "ABC-0002",
+    "Nombre": "Organizador de escritorio",
+    "Precio": 89.0
+  }
+]
