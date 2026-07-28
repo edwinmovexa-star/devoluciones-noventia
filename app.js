@@ -8,8 +8,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {
-  BrowserMultiFormatReader,
-  NotFoundException
+  BrowserMultiFormatReader
 } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
@@ -831,11 +830,8 @@ async function iniciarEscaner() {
             return;
           }
 
-          if (
-            error &&
-            !(error instanceof NotFoundException)
-          ) {
-            console.warn("Lectura del escáner:", error);
+          if (error) {
+            console.warn(error);
           }
         }
       );
