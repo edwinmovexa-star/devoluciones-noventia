@@ -688,7 +688,7 @@ function esDispositivoMovil() {
 
   return navegadorMovil || pantallaTactil;
 }
-function manejarLecturaCodigo(event) {
+odigo(event) {
 
 function actualizarMensajeEscaner(mensaje, tipo = "") {
   const elemento = $("#mensajeEscaner");
@@ -698,7 +698,7 @@ function actualizarMensajeEscaner(mensaje, tipo = "") {
   elemento.textContent = mensaje;
   elemento.className = `scanner-message ${tipo}`.trim();
 }
-}
+
 function vibrarLecturaCorrecta() {
   if ("vibrate" in navigator) {
     navigator.vibrate(150);
