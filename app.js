@@ -747,7 +747,15 @@ async function procesarCodigoEscaneado(codigo) {
     "success"
   );
 
-  $("#productoClave").value = clave;
+  const campoClave = $("#productoClave");
+
+  if (!campoClave) {
+    await cerrarEscaner();
+    console.error("No se encontró el campo productoClave.");
+    return;
+  }
+
+  campoClave.value = clave;
 
   await cerrarEscaner();
 
@@ -756,7 +764,7 @@ async function procesarCodigoEscaneado(codigo) {
   });
 
   if (!producto) {
-    $("#productoNombre").focus();
+    $("#productoNombre")?.focus();
   }
 }
 
@@ -1010,7 +1018,7 @@ function buscarProductoCatalogo({ enfocarSiguiente = false } = {}) {
       "La clave no está en el catálogo. Puedes capturar el nombre manualmente.",
       "not-found"
     );
-    $("#productoNombre").focus();
+    $("#productoNombre")?.focus();
     return null;
   }
 
@@ -1024,9 +1032,9 @@ function buscarProductoCatalogo({ enfocarSiguiente = false } = {}) {
 
   if (enfocarSiguiente) {
     if (!$("#productoCosto").value) {
-      $("#productoCosto").focus();
+      $("#productoCosto")?.focus();
     } else {
-      $("#productoCantidad").focus();
+      $("#productoCantidad")?.focus();
       $("#productoCantidad").select();
     }
   }
@@ -1370,7 +1378,7 @@ function agregarProducto() {
   $("#productoNombre").value = "";
   $("#productoCosto").value = "";
   $("#productoCantidad").value = "1";
-  $("#productoClave").focus();
+  $("#productoClave")?.focus();
   renderProductosNuevo();
   actualizarTotalNuevo();
 }
@@ -1387,12 +1395,12 @@ function validarPedido() {
     }
     if (tipoEntrega === "PUNTO_ENTREGA" && !$("#puntoEntrega").value) {
       alert("Selecciona el punto de entrega.");
-      $("#puntoEntrega").focus();
+      $("#puntoEntrega")?.focus();
       return false;
     }
     if (tipoEntrega === "DOMICILIO" && !$("#ubicacion").value.trim()) {
       alert("Escribe el domicilio de entrega.");
-      $("#ubicacion").focus();
+      $("#ubicacion")?.focus();
       return false;
     }
 
@@ -1400,7 +1408,7 @@ function validarPedido() {
       const costoEnvio = Number($("#costoEnvio").value);
       if (!Number.isFinite(costoEnvio) || costoEnvio < 0) {
         alert("Escribe un costo de envío válido.");
-        $("#costoEnvio").focus();
+        $("#costoEnvio")?.focus();
         return false;
       }
     }
@@ -1416,13 +1424,13 @@ function validarPedido() {
   for (const [id, mensaje] of campos) {
     if (!$("#" + id).value.trim()) {
       alert(mensaje);
-      $("#" + id).focus();
+      $("#" + id)?.focus();
       return false;
     }
   }
   if ($("#estatusPago").value !== "PENDIENTE" && !$("#metodoPagoInicial").value.trim()) {
     alert("Selecciona el método del primer pago.");
-    $("#metodoPagoInicial").focus();
+    $("#metodoPagoInicial")?.focus();
     return false;
   }
   if (!productosNuevo.length) {
@@ -1709,7 +1717,7 @@ async function cambiarEstado() {
         ? "Antes de finalizar debes confirmar que los productos ya fueron regresados al inventario."
         : "Antes de finalizar debes confirmar que la devolución ya fue registrada en el sistema."
     );
-    $("#confirmarSumaInventario").focus();
+    $("#confirmarSumaInventario")?.focus();
     return;
   }
 
@@ -2353,24 +2361,26 @@ $("#filtroMetodo").addEventListener("change", renderLista);
 $("#filtroDevolucion").addEventListener("change", renderLista);
 
 $("#formLogin").addEventListener("submit", iniciarSesion);
-$("#btnCerrarSesion").addEventListener("click", cerrarSesion);
-$("#btnEscanearCodigo").addEventListener(
-  "click",
-  iniciarEscaner
-);
+const btnEscanearCodigo = $("#btnEscanearCodigo");
+const btnCerrarEscaner = $("#btnCerrarEscaner");
+const btnCancelarEscaner = $("#btnCancelarEscaner");
+const modalEscaner = $("#modalEscaner");
 
-$("#btnCerrarEscaner").addEventListener(
-  "click",
-  cerrarEscaner
-);
+if (btnEscanearCodigo) {
+  btnEscanearCodigo.addEventListener("click", iniciarEscaner);
+}
 
-$("#btnCancelarEscaner").addEventListener(
-  "click",
-  cerrarEscaner
-);
-$("#modalEscaner").addEventListener("close", () => {
-  detenerEscaner();
-});
+if (btnCerrarEscaner) {
+  btnCerrarEscaner.addEventListener("click", cerrarEscaner);
+}
+
+if (btnCancelarEscaner) {
+  btnCancelarEscaner.addEventListener("click", cerrarEscaner);
+}
+
+if (modalEscaner) {
+  modalEscaner.addEventListener("close", detenerEscaner);
+}
 
 cargarCatalogoProductos();
 configurarEscanerMovil();
