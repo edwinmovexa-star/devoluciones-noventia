@@ -226,80 +226,32 @@
         <span id="estadoCatalogo" class="catalog-status loading">Cargando catálogo…</span>
       </div>
       <div class="product-entry">
-        
-        <dialog id="modalEscaner" class="modal-escaner">
-          <div class="scanner-container">
-
-            <div class="dialog-header scanner-header">
-              <div>
-                <h2>Escanear código</h2>
-                <p>Coloca el código dentro del recuadro.</p>
-              </div>
-
-              <button
-                id="btnCerrarEscaner"
-                type="button"
-                class="icon-button"
-                aria-label="Cerrar cámara"
-              >
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-
-            <div class="scanner-video-wrapper">
-              <video
-                id="videoEscaner"
-                autoplay
-                muted
-                playsinline
-              ></video>
-
-              <div class="scanner-guide">
-                <div class="scanner-line"></div>
-              </div>
-            </div>
-
-            <p id="mensajeEscaner" class="scanner-message">
-              Preparando cámara…
-            </p>
-
+        <label class="campo-clave-producto">
+          Clave
+          <div class="clave-con-escaner">
+            <input
+              id="productoClave"
+              type="text"
+              maxlength="50"
+              placeholder="Escanea o escribe el SKU"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              inputmode="text"
+            />
             <button
-              id="btnCancelarEscaner"
+              id="btnEscanearCodigo"
               type="button"
-              class="secondary scanner-cancel-button"
+              class="secondary boton-escaner-movil"
+              aria-label="Escanear código con la cámara"
+              title="Escanear con cámara"
             >
-              Cancelar
+              <i class="fa-solid fa-camera"></i>
+              <span>Escanear</span>
             </button>
-
           </div>
-          <label class="campo-clave-producto">
-  Clave
-
-  <div class="clave-con-escaner">
-    <input
-      id="productoClave"
-      type="text"
-      maxlength="50"
-      placeholder="Escanea o escribe el SKU"
-      autocomplete="off"
-      autocapitalize="off"
-      spellcheck="false"
-      inputmode="text"
-    />
-
-    <button
-      id="btnEscanearCodigo"
-      type="button"
-      class="secondary boton-escaner-movil"
-    >
-      <i class="fa-solid fa-camera"></i>
-      Escanear
-    </button>
-  </div>
-</label>
-        </dialog>
-
-
+          <small id="mensajeProducto" class="product-message"></small>
+        </label>
         <label class="grow">
           Producto
           <input id="productoNombre" maxlength="150" placeholder="Descripción" />
@@ -542,6 +494,28 @@
     </form>
   </dialog>
 
+
+  <dialog id="modalEscaner" class="modal-escaner">
+    <div class="scanner-container">
+      <div class="dialog-header scanner-header">
+        <div>
+          <h2>Escanear código</h2>
+          <p>Coloca el código de barras dentro del recuadro.</p>
+        </div>
+        <button id="btnCerrarEscaner" type="button" class="icon-button" aria-label="Cerrar cámara">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="lectorCodigoMovil" class="lector-codigo-movil"></div>
+      <p id="mensajeEscaner" class="scanner-message">Preparando cámara…</p>
+
+      <button id="btnCancelarEscaner" type="button" class="secondary scanner-cancel-button">
+        Cancelar
+      </button>
+    </div>
+  </dialog>
+
   <template id="templateCard">
     <article class="card">
       <div class="card-head">
@@ -562,6 +536,7 @@
   <script src="https://kit.fontawesome.com/702f509feb.js" crossorigin="anonymous"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script type="module" src="app.js"></script>
   </div>
 </body>

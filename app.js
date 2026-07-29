@@ -7,9 +7,7 @@ import {
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {
-  BrowserMultiFormatReader
-} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
+
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
@@ -31,9 +29,9 @@ let catalogoCargado = false;
 let usuarioActual = null;
 let perfilActual = null;
 let cancelarEscuchaSurtidos = null;
-let lectorCodigo = null;
-let controlesEscaner = null;
-let escanerActivo = false;
+let lectorCodigoMovil = null;
+let escanerMovilActivo = false;
+let procesandoCodigoMovil = false;
 
 const ESTADOS = {
   EN_PROCESO: "En proceso",
@@ -677,207 +675,6 @@ function limpiarClaveProducto(valor) {
   return String(valor ?? "").trim();
 }
 
-function esDispositivoMovil() {
-  const navegadorMovil =
-    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-
-  const pantallaTactil =
-    navigator.maxTouchPoints > 0 &&
-    window.matchMedia("(max-width: 1024px)").matches;
-
-  return navegadorMovil || pantallaTactil;
-}
-
-function actualizarMensajeEscaner(mensaje, tipo = "") {
-  const elemento = $("#mensajeEscaner");
-
-  if (!elemento) return;
-
-  elemento.textContent = mensaje;
-  elemento.className = `scanner-message ${tipo}`.trim();
-}
-
-function vibrarLecturaCorrecta() {
-  if ("vibrate" in navigator) {
-    navigator.vibrate(150);
-  }
-}
-
-async function detenerEscaner() {
-  escanerActivo = false;
-
-  try {
-    if (controlesEscaner) {
-      controlesEscaner.stop();
-      controlesEscaner = null;
-    }
-  } catch (error) {
-    console.warn("No fue posible detener los controles del escáner:", error);
-  }
-
-  const video = $("#videoEscaner");
-
-  if (video?.srcObject) {
-    video.srcObject.getTracks().forEach(track => track.stop());
-    video.srcObject = null;
-  }
-
-  lectorCodigo = null;
-}
-
-async function cerrarEscaner() {
-  await detenerEscaner();
-
-  const modal = $("#modalEscaner");
-
-  if (modal?.open) {
-    modal.close();
-  }
-}
-
-async function procesarCodigoEscaneado(codigo) {
-  const clave = limpiarClaveProducto(codigo);
-
-  if (!clave) return;
-
-  vibrarLecturaCorrecta();
-
-  actualizarMensajeEscaner(
-    `Código detectado: ${clave}`,
-    "success"
-  );
-
-  const campoClave = $("#productoClave");
-
-  if (!campoClave) {
-    await cerrarEscaner();
-    console.error("No se encontró el campo productoClave.");
-    return;
-  }
-
-  campoClave.value = clave;
-
-  await cerrarEscaner();
-
-  const producto = buscarProductoCatalogo({
-    enfocarSiguiente: true
-  });
-
-  if (!producto) {
-    $("#productoNombre")?.focus();
-  }
-}
-
-async function iniciarEscaner() {
-  const modal = $("#modalEscaner");
-  const video = $("#videoEscaner");
-
-  if (!modal || !video) {
-    alert("No se encontró la ventana del escáner.");
-    return;
-  }
-
-  if (!navigator.mediaDevices?.getUserMedia) {
-    alert(
-      "Este navegador no permite acceder a la cámara. " +
-      "Abre el sistema desde Chrome o Safari usando HTTPS."
-    );
-    return;
-  }
-
-  if (escanerActivo) return;
-
-  escanerActivo = true;
-  actualizarMensajeEscaner("Solicitando acceso a la cámara…");
-
-  modal.showModal();
-
-  try {
-    lectorCodigo = new BrowserMultiFormatReader();
-
-    const dispositivos =
-      await BrowserMultiFormatReader.listVideoInputDevices();
-
-    if (!dispositivos.length) {
-      throw new Error("No se encontró ninguna cámara disponible.");
-    }
-
-    let camaraSeleccionada = dispositivos.find(dispositivo => {
-      const nombre = dispositivo.label.toLowerCase();
-
-      return (
-        nombre.includes("back") ||
-        nombre.includes("rear") ||
-        nombre.includes("trasera") ||
-        nombre.includes("environment")
-      );
-    });
-
-    if (!camaraSeleccionada) {
-      camaraSeleccionada =
-        dispositivos[dispositivos.length - 1];
-    }
-
-    actualizarMensajeEscaner(
-      "Apunta la cámara al código de barras."
-    );
-
-    controlesEscaner =
-      await lectorCodigo.decodeFromVideoDevice(
-        camaraSeleccionada.deviceId,
-        video,
-        async (resultado, error) => {
-          if (!escanerActivo) return;
-
-          if (resultado) {
-            escanerActivo = false;
-
-            const codigo = resultado.getText();
-
-            await procesarCodigoEscaneado(codigo);
-            return;
-          }
-
-          if (error) {
-            console.warn(error);
-          }
-        }
-      );
-
-  } catch (error) {
-    console.error("Error al iniciar la cámara:", error);
-
-    await detenerEscaner();
-
-    let mensaje =
-      "No se pudo abrir la cámara. Revisa los permisos del navegador.";
-
-    if (error.name === "NotAllowedError") {
-      mensaje =
-        "El permiso de la cámara fue rechazado. " +
-        "Actívalo en la configuración del navegador.";
-    }
-
-    if (error.name === "NotFoundError") {
-      mensaje =
-        "No se encontró una cámara disponible en este dispositivo.";
-    }
-
-    actualizarMensajeEscaner(mensaje, "error");
-  }
-}
-
-function configurarEscanerMovil() {
-  const boton = $("#btnEscanearCodigo");
-
-  if (!boton) return;
-
-  boton.classList.toggle(
-    "visible",
-    esDispositivoMovil()
-  );
-}  
-
 function valorCampoProducto(producto, nombres) {
   for (const nombre of nombres) {
     if (producto && producto[nombre] !== undefined && producto[nombre] !== null) {
@@ -1018,7 +815,7 @@ function buscarProductoCatalogo({ enfocarSiguiente = false } = {}) {
       "La clave no está en el catálogo. Puedes capturar el nombre manualmente.",
       "not-found"
     );
-    $("#productoNombre")?.focus();
+    $("#productoNombre").focus();
     return null;
   }
 
@@ -1032,9 +829,9 @@ function buscarProductoCatalogo({ enfocarSiguiente = false } = {}) {
 
   if (enfocarSiguiente) {
     if (!$("#productoCosto").value) {
-      $("#productoCosto")?.focus();
+      $("#productoCosto").focus();
     } else {
-      $("#productoCantidad")?.focus();
+      $("#productoCantidad").focus();
       $("#productoCantidad").select();
     }
   }
@@ -1053,6 +850,152 @@ function manejarLecturaCodigo(event) {
   // No agrega automáticamente la fila porque todavía puede faltar costo o cantidad.
   // El lector completa la clave y el nombre; después el usuario confirma con Agregar.
   return producto;
+}
+
+// =========================
+// Escáner móvil por cámara
+// =========================
+function actualizarMensajeEscaner(texto = "", tipo = "") {
+  const elemento = $("#mensajeEscaner");
+  if (!elemento) return;
+  elemento.textContent = texto;
+  elemento.className = `scanner-message ${tipo}`.trim();
+}
+
+function esDispositivoMovil() {
+  return (
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 0 && window.matchMedia("(max-width: 1024px)").matches)
+  );
+}
+
+async function detenerEscanerMovil() {
+  escanerMovilActivo = false;
+
+  if (!lectorCodigoMovil) return;
+
+  try {
+    if (lectorCodigoMovil.isScanning) {
+      await lectorCodigoMovil.stop();
+    }
+  } catch (error) {
+    console.warn("No fue posible detener el escáner:", error);
+  }
+
+  try {
+    lectorCodigoMovil.clear();
+  } catch (error) {
+    console.warn("No fue posible limpiar el escáner:", error);
+  }
+
+  lectorCodigoMovil = null;
+}
+
+async function cerrarEscanerMovil() {
+  await detenerEscanerMovil();
+
+  const modal = $("#modalEscaner");
+  if (modal?.open) modal.close();
+}
+
+async function procesarCodigoMovil(codigoLeido) {
+  if (procesandoCodigoMovil) return;
+
+  const clave = limpiarClaveProducto(codigoLeido);
+  if (!clave) return;
+
+  procesandoCodigoMovil = true;
+  actualizarMensajeEscaner(`Código detectado: ${clave}`, "success");
+
+  if ("vibrate" in navigator) navigator.vibrate(120);
+
+  const campoClave = $("#productoClave");
+  if (campoClave) campoClave.value = clave;
+
+  await cerrarEscanerMovil();
+
+  const producto = buscarProductoCatalogo({ enfocarSiguiente: true });
+  if (!producto) $("#productoNombre")?.focus();
+
+  window.setTimeout(() => {
+    procesandoCodigoMovil = false;
+  }, 500);
+}
+
+async function iniciarEscanerMovil() {
+  const modal = $("#modalEscaner");
+  const contenedor = $("#lectorCodigoMovil");
+
+  if (!modal || !contenedor) {
+    alert("No se encontró la ventana del escáner en el HTML.");
+    return;
+  }
+
+  if (!window.Html5Qrcode) {
+    alert("No fue posible cargar la librería del escáner. Revisa tu conexión a internet.");
+    return;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    alert("Este navegador no permite usar la cámara. Abre el sistema desde HTTPS en Chrome o Safari.");
+    return;
+  }
+
+  if (escanerMovilActivo) return;
+
+  modal.showModal();
+  actualizarMensajeEscaner("Solicitando permiso para usar la cámara…");
+
+  try {
+    lectorCodigoMovil = new window.Html5Qrcode("lectorCodigoMovil");
+    escanerMovilActivo = true;
+
+    const configuracion = {
+      fps: 12,
+      qrbox: (anchoVista, altoVista) => ({
+        width: Math.min(Math.floor(anchoVista * 0.88), 340),
+        height: Math.min(Math.floor(altoVista * 0.36), 150)
+      }),
+      aspectRatio: 1.5,
+      disableFlip: true
+    };
+
+    actualizarMensajeEscaner("Apunta la cámara al código de barras.");
+
+    await lectorCodigoMovil.start(
+      { facingMode: "environment" },
+      configuracion,
+      codigo => procesarCodigoMovil(codigo),
+      () => {
+        // Los intentos sin lectura son normales y no deben mostrarse como error.
+      }
+    );
+  } catch (error) {
+    console.error("Error al iniciar el escáner móvil:", error);
+    await detenerEscanerMovil();
+
+    let mensaje = "No se pudo abrir la cámara. Revisa los permisos del navegador.";
+    const nombreError = error?.name || "";
+    const textoError = String(error?.message || error || "").toLowerCase();
+
+    if (nombreError === "NotAllowedError" || textoError.includes("permission")) {
+      mensaje = "El permiso de cámara fue rechazado. Actívalo en la configuración del navegador.";
+    } else if (nombreError === "NotFoundError" || textoError.includes("camera not found")) {
+      mensaje = "No se encontró una cámara disponible en este dispositivo.";
+    } else if (!window.isSecureContext) {
+      mensaje = "La cámara necesita que el sistema esté publicado con HTTPS.";
+    }
+
+    actualizarMensajeEscaner(mensaje, "error");
+  }
+}
+
+function configurarBotonEscanerMovil() {
+  const boton = $("#btnEscanearCodigo");
+  if (!boton) return;
+
+  // CSS controla la visualización; esta clase también permite teléfonos con pantalla grande.
+  boton.classList.toggle("dispositivo-movil", esDispositivoMovil());
 }
 
 function siguienteFolio(tipo) {
@@ -1378,7 +1321,7 @@ function agregarProducto() {
   $("#productoNombre").value = "";
   $("#productoCosto").value = "";
   $("#productoCantidad").value = "1";
-  $("#productoClave")?.focus();
+  $("#productoClave").focus();
   renderProductosNuevo();
   actualizarTotalNuevo();
 }
@@ -1395,12 +1338,12 @@ function validarPedido() {
     }
     if (tipoEntrega === "PUNTO_ENTREGA" && !$("#puntoEntrega").value) {
       alert("Selecciona el punto de entrega.");
-      $("#puntoEntrega")?.focus();
+      $("#puntoEntrega").focus();
       return false;
     }
     if (tipoEntrega === "DOMICILIO" && !$("#ubicacion").value.trim()) {
       alert("Escribe el domicilio de entrega.");
-      $("#ubicacion")?.focus();
+      $("#ubicacion").focus();
       return false;
     }
 
@@ -1408,7 +1351,7 @@ function validarPedido() {
       const costoEnvio = Number($("#costoEnvio").value);
       if (!Number.isFinite(costoEnvio) || costoEnvio < 0) {
         alert("Escribe un costo de envío válido.");
-        $("#costoEnvio")?.focus();
+        $("#costoEnvio").focus();
         return false;
       }
     }
@@ -1424,13 +1367,13 @@ function validarPedido() {
   for (const [id, mensaje] of campos) {
     if (!$("#" + id).value.trim()) {
       alert(mensaje);
-      $("#" + id)?.focus();
+      $("#" + id).focus();
       return false;
     }
   }
   if ($("#estatusPago").value !== "PENDIENTE" && !$("#metodoPagoInicial").value.trim()) {
     alert("Selecciona el método del primer pago.");
-    $("#metodoPagoInicial")?.focus();
+    $("#metodoPagoInicial").focus();
     return false;
   }
   if (!productosNuevo.length) {
@@ -1717,7 +1660,7 @@ async function cambiarEstado() {
         ? "Antes de finalizar debes confirmar que los productos ya fueron regresados al inventario."
         : "Antes de finalizar debes confirmar que la devolución ya fue registrada en el sistema."
     );
-    $("#confirmarSumaInventario")?.focus();
+    $("#confirmarSumaInventario").focus();
     return;
   }
 
@@ -2336,6 +2279,22 @@ $("#btnExportarCaja").addEventListener("click", exportarCaja);
 $("#btnImprimirCaja").addEventListener("click", imprimirCaja);
 $("#btnAgregarProducto").addEventListener("click", agregarProducto);
 $("#productoClave").addEventListener("keydown", manejarLecturaCodigo);
+
+const btnEscanearCodigo = $("#btnEscanearCodigo");
+const btnCerrarEscaner = $("#btnCerrarEscaner");
+const btnCancelarEscaner = $("#btnCancelarEscaner");
+const modalEscaner = $("#modalEscaner");
+
+btnEscanearCodigo?.addEventListener("click", iniciarEscanerMovil);
+btnCerrarEscaner?.addEventListener("click", cerrarEscanerMovil);
+btnCancelarEscaner?.addEventListener("click", cerrarEscanerMovil);
+modalEscaner?.addEventListener("cancel", event => {
+  event.preventDefault();
+  cerrarEscanerMovil();
+});
+modalEscaner?.addEventListener("close", () => {
+  if (escanerMovilActivo) detenerEscanerMovil();
+});
 $("#productoClave").addEventListener("change", () => buscarProductoCatalogo());
 $("#productoClave").addEventListener("blur", () => {
   if ($("#productoClave").value.trim() && !$("#productoNombre").value.trim()) {
@@ -2361,26 +2320,7 @@ $("#filtroMetodo").addEventListener("change", renderLista);
 $("#filtroDevolucion").addEventListener("change", renderLista);
 
 $("#formLogin").addEventListener("submit", iniciarSesion);
-const btnEscanearCodigo = $("#btnEscanearCodigo");
-const btnCerrarEscaner = $("#btnCerrarEscaner");
-const btnCancelarEscaner = $("#btnCancelarEscaner");
-const modalEscaner = $("#modalEscaner");
-
-if (btnEscanearCodigo) {
-  btnEscanearCodigo.addEventListener("click", iniciarEscaner);
-}
-
-if (btnCerrarEscaner) {
-  btnCerrarEscaner.addEventListener("click", cerrarEscaner);
-}
-
-if (btnCancelarEscaner) {
-  btnCancelarEscaner.addEventListener("click", cerrarEscaner);
-}
-
-if (modalEscaner) {
-  modalEscaner.addEventListener("close", detenerEscaner);
-}
+$("#btnCerrarSesion").addEventListener("click", cerrarSesion);
 
 cargarCatalogoProductos();
-configurarEscanerMovil();
+configurarBotonEscanerMovil();
