@@ -843,3 +843,10 @@ button{
     min-height: 360px;
   }
 }
+.clave-con-escaner{
+flex-direction: column;
+}
+
+#mensajeProducto{
+  display: none;
+}
